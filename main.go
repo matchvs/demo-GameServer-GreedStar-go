@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-11-28 14:30:33
  * @LastEditors: Ville
- * @LastEditTime: 2018-11-30 14:58:09
+ * @LastEditTime: 2018-12-03 17:34:49
  * @Description: matchvs game server example
  */
 
@@ -22,7 +22,7 @@ import (
 //程序函数入口
 func main() {
 	// 定义业务处理对象这个业务类需要 继承接口
-	handler := &app.App{}
+	handler := app.NewApp()
 	// 创建 gameServer
 	gsserver := matchvs.NewGameServer(handler, "")
 	handler.SetPushHandler(gsserver.GetPushHandler())

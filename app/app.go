@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-11-28 14:30:33
  * @LastEditors: Ville
- * @LastEditTime: 2018-11-28 17:15:56
+ * @LastEditTime: 2018-12-03 20:01:44
  * @Description: game server handler module, the struct of  App  implemente the interface which is located in game_server.go
  				 it is named BaseInterface
 */
@@ -20,23 +20,35 @@ import (
 )
 
 type App struct {
-	counter uint32
-	push    *matchvs.PushManager
+	counter     uint32
+	push        *matchvs.PushManager
+	greedyStart *GreedyStar
+}
+
+func NewApp() *App {
+	app := &App{
+		counter:     0,
+		greedyStart: NewGreedyStar(),
+	}
+	return app
 }
 
 func (self *App) SetPushHandler(push *matchvs.PushManager) {
 	self.push = push
+	self.greedyStart.SetPush(push)
 }
 
 // 创建房间回调
-func (d *App) OnCreateRoom(req map[string]interface{}) (err error) {
+func (d *App) OnCreateRoom(req *defines.MsOnCreateRoom) (err error) {
 	log.LogD(" OnCreateRoom %v", req)
+	d.greedyStart.CreateRoom(req.RoomID, req.UserProfile)
 	return
 }
 
 // 加入房间回调
-func (d *App) OnJoinRoom(req map[string]interface{}) (err error) {
+func (d *App) OnJoinRoom(req *defines.MsOnJoinRoom) (err error) {
 	log.LogD(" OnJoinRoom %v", req)
+	d.greedyStart.JoinRoom(req.UserID, req.RoomID, req.UserProfile)
 	return
 }
 
@@ -53,8 +65,13 @@ func (d *App) OnJoinOpen(req map[string]interface{}) (err error) {
 }
 
 // 离开房间回调
+// 参数 map 类型 key 如下：
+// userID : uint32 用户ID
+// gameID : uint32 游戏ID
+// roomID : uint64 房间ID
 func (d *App) OnLeaveRoom(req map[string]interface{}) (err error) {
 	log.LogD(" OnLeaveRoom %v", req)
+	d.greedyStart.LeaveRoom(req["userID"].(uint32), req["roomID"].(uint64))
 	return
 }
 
@@ -94,14 +111,17 @@ func (d *App) OnHotelConnect(req map[string]interface{}) (err error) {
 
 // 消息广播
 func (d *App) OnReceiveEvent(req *defines.MsOnReciveEvent) (err error) {
-	// log.LogD(" OnReceiveEvent %v", string(req.CpProto))
-	d.Example_Push(req)
+	d.greedyStart.ClientEvent(req.UserID, req.RoomID, req.CpProto)
 	return
 }
 
 // 房间断开
+// 参数 map 类型 key 如下：
+// gameID : uint32 游戏ID
+// roomID : uint64 房间ID
 func (d *App) OnDeleteRoom(req map[string]interface{}) (err error) {
 	log.LogD(" OnDeleteRoom %v", req)
+	d.greedyStart.DeleteRoom(req["roomID"].(uint64))
 	return
 }
 

@@ -1,5 +1,5 @@
 [Server]
-Host = "0.0.0.0:36520"
+Host = "0.0.0.0:30523"
 
 [Log]
 # Level's value can INFO、DEBUG、ERROR、WARNING, the default value is INFO
@@ -17,8 +17,8 @@ LocalPort = 30054
 
 
 [RoomManage]
-Enable = false
-SvcName = "svc-abc"
-PodName = "pod-abc"
-RemoteHost = "192.168.8.1"
+Enable = true
+SvcName = "svc-200773-0-0"
+PodName = " deploy-200773-0-0-c7774c4cc-k6cbb"
+RemoteHost = "directory10.matchvs.com"
 RemotePort = 9982
