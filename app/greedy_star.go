@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:59:24
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-03 20:15:04
+ * @LastEditTime: 2018-12-04 19:11:29
  * @Description: file content
  */
 package app
@@ -17,14 +17,10 @@ import (
 	matchvs "github.com/matchvs/gameServer-go"
 )
 
-type RoomEvent struct {
-	Type string      `json:"type"`
-	Data interface{} `json:"data"`
-}
-
 type GreedyStar struct {
 	push    *matchvs.PushManager
 	roomMap sync.Map
+	gameID  uint32
 }
 
 func NewGreedyStar() *GreedyStar {
@@ -36,8 +32,10 @@ func (self *GreedyStar) SetPush(p *matchvs.PushManager) {
 	self.push = p
 }
 
-func (self *GreedyStar) CreateRoom(roomID uint64, userProperty []byte) {
-	room := NewRoomItem(roomID)
+func (self *GreedyStar) CreateRoom(gameID uint32, roomID uint64, userProperty []byte) {
+	self.gameID = gameID
+	room := NewRoomItem(gameID, roomID)
+	room.SetPush(self.push)
 	self.roomMap.Store(roomID, room)
 }
 
@@ -70,15 +68,17 @@ func (self *GreedyStar) DeleteRoom(roomID uint64) {
 
 // 处理来自客户端的消息
 func (self *GreedyStar) ClientEvent(userID uint32, roomID uint64, datas []byte) {
-	event := &RoomEvent{}
+	event := &RoomEventRecv{}
 	json.Unmarshal(datas, event)
-	// item, ok := self.roomMap.Load(roomID)
-	// if !ok {
-	// 	return
-	// }
+	item, ok := self.roomMap.Load(roomID)
+	if !ok {
+		return
+	}
+	room := item.(*RoomItem)
 	switch event.Type {
 	case "input":
-
+		room.UpateUserInput(userID, event.Data.([]byte))
 	case "startGame":
+		room.StartGame(self.gameID, userID)
 	}
 }
