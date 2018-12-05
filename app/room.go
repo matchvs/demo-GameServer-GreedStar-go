@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:55:45
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-04 19:43:05
+ * @LastEditTime: 2018-12-05 19:08:08
  * @Description: file content
  */
 package app
@@ -12,6 +12,7 @@ import (
 	"encoding/json"
 	"errors"
 	"sort"
+	"time"
 
 	"github.com/matchvs/gameServer-go/src/defines"
 
@@ -25,15 +26,28 @@ type RoomItem struct {
 	push     *matchvs.PushManager
 	gameID   uint32
 	foodList []*Food
+	foodNum  int
 }
 
+// 新建一个房间
 func NewRoomItem(gameID uint32, roomID uint64) *RoomItem {
 	room := new(RoomItem)
 	room.roomID = roomID
 	room.userList = NewGameUserSlice()
-	room.foodList = make([]*Food, 0, 100)
 	room.gameTime = 54000
+	// 初始化食物
+	room.InitFoods()
 	return room
+}
+
+// 初始化食物
+func (self *RoomItem) InitFoods() {
+	self.foodList = make([]*Food, 0, FOOD_INITIAL_NUM)
+	for i := 0; i < FOOD_INITIAL_NUM; i++ {
+		food := NewFood(i)
+		self.foodList = append(self.foodList, food)
+	}
+	self.foodNum = FOOD_INITIAL_NUM
 }
 
 func (self *RoomItem) SetPush(p *matchvs.PushManager) {
@@ -49,35 +63,15 @@ func (self *RoomItem) SortUser() {
 func (self *RoomItem) GetUserIDList() []uint32 {
 	uids := make([]uint32, len(self.userList))
 	for key := range self.userList {
-		uids = append(uids, self.userList[key].userID)
+		uids = append(uids, self.userList[key].UserID)
 	}
 	return uids
 }
 
 // 查询用户ID
 func (self *RoomItem) FindUser(userID uint32) (*GameUser, int) {
-	// var (
-	// 	hight = len(self.userList)
-	// 	low   = 0
-	// 	mid   = 0
-	// )
-	// for i := 0; i < len(self.userList); i++ {
-	// 	mid = (low + hight) / 2
-	// 	tmp := self.userList[mid].userID
-	// 	if tmp == userID {
-	// 		return self.userList[mid], mid
-	// 	} else if tmp > userID {
-	// 		low = mid + 1
-	// 	} else {
-	// 		hight = mid - 1
-	// 	}
-	// 	if low > hight {
-	// 		return nil, -1
-	// 	}
-	// }
-	// return nil, -1
 	for key := range self.userList {
-		tmp := self.userList[key].userID
+		tmp := self.userList[key].UserID
 		if tmp == userID {
 			return self.userList[key], key
 		}
@@ -89,7 +83,7 @@ func (self *RoomItem) FindUser(userID uint32) (*GameUser, int) {
 func (self *RoomItem) DelRepeat() {
 	userMap := make(map[uint32]*GameUser)
 	for key := range self.userList {
-		userMap[self.userList[key].userID] = self.userList[key]
+		userMap[self.userList[key].UserID] = self.userList[key]
 	}
 	self.userList = self.userList[:0]
 	for _, value := range userMap {
@@ -99,15 +93,16 @@ func (self *RoomItem) DelRepeat() {
 }
 
 // 添加用户
-func (self *RoomItem) AddUser(userID uint32, userProfile []byte) {
+func (self *RoomItem) AddUser(userID uint32, userProfile []byte) *GameUser {
 	// 先判断是否重复
-	if _, index := self.FindUser(userID); index >= 0 {
-		return
+	if user, index := self.FindUser(userID); index >= 0 {
+		return user
 	}
-	user := NewGameUser(userID)
+	user := NewGameUser(userID, STATE_USER_PREPARED, DEFAULT_SCORE, USER_SIZE, DEFAULT_SPEED)
 	self.userList = append(self.userList, user)
 	// 添加新值就排序
 	self.SortUser()
+	return user
 }
 
 // 删除用户
@@ -144,17 +139,38 @@ func (self *RoomItem) StartGame(gameID, userID uint32) {
 	return
 }
 
-// 发送食物
+// 发送食物给指定用户
 func (self *RoomItem) SendFoodMsg(userID uint32) {
 	times := 3
 	oneslen := len(self.foodList) / times
 	for i := 0; i < 3; i++ {
 		food := self.foodList[i*oneslen : (i+1)*oneslen]
-		msg, _ := json.Marshal(food)
+		event := &RoomEventSend{
+			Type: "addFood",
+			Data: food,
+		}
+		msg, _ := json.Marshal(event)
 		self.PushEventOther([]uint32{userID}, msg)
 	}
 }
 
+// 发送其他用户给当 给指定用户
+func (self *RoomItem) SendOtherUsers(userID uint32) {
+	users := make([]uint32, len(self.userList))
+	for key := range self.userList {
+		if self.userList[key].UserID != userID {
+			users = append(users, self.userList[key].UserID)
+		}
+	}
+	event := &RoomEventSend{
+		Type: "otherPlayer",
+		Data: users,
+	}
+	msg, _ := json.Marshal(event)
+	self.PushEventOther([]uint32{userID}, msg)
+}
+
+// 推送消息给指定部分用户
 func (self *RoomItem) PushEventOther(uids []uint32, msg []byte) {
 	req := &defines.MsPushEventReq{
 		RoomID:    self.roomID,
@@ -166,6 +182,7 @@ func (self *RoomItem) PushEventOther(uids []uint32, msg []byte) {
 	self.push.PushEvent(req)
 }
 
+// 发送消息给所有用户
 func (self *RoomItem) PushEvent(msg []byte) {
 	req := &defines.MsPushEventReq{
 		RoomID:    self.roomID,
@@ -175,4 +192,85 @@ func (self *RoomItem) PushEvent(msg []byte) {
 		CpProto:   msg[:],
 	}
 	self.push.PushEvent(req)
+}
+
+// 有人加入房间
+func (self *RoomItem) UserJoinRoom(userID uint32, userProfile []byte) {
+	user := self.AddUser(userID, userProfile)
+	event := &RoomEventSend{
+		Type: "addPlayer",
+		Data: user,
+	}
+	msg, _ := json.Marshal(event)
+	self.PushEventOther([]uint32{userID}, msg)
+
+	event2 := &RoomEventSend{
+		Type: "countDown",
+		Data: self.gameTime,
+	}
+	msg, _ = json.Marshal(event2)
+	self.PushEventOther([]uint32{userID}, msg)
+
+	self.SendFoodMsg(userID)
+	self.SendOtherUsers(userID)
+
+}
+
+// 房间游戏定时器
+func (self *RoomItem) RoomTimer() {
+	for {
+		if self.gameTime <= 0 {
+			event := &RoomEventRecv{
+				Type: "GameOver",
+				Data: "",
+			}
+			msg, _ := json.Marshal(event)
+			// 发送给所有人
+			self.PushEvent(msg)
+			return
+		}
+		self.IsUserscollision()
+		self.IsFoodCollision()
+		self.IsBorderCollision()
+		self.IsFoodListFull()
+		self.RoomUserRank()
+		if self.IsPlayerMove() {
+
+		}
+		time.Sleep(time.Microsecond * GAME_TIMER_INTERVAL)
+	}
+}
+
+// 碰撞检测
+func (self *RoomItem) IsUserscollision() {
+	userNum := len(self.userList)
+	for i := 0; i < userNum; i++ {
+		for j := 0; j < userNum; j++ {
+		}
+	}
+}
+
+// 判断是否吃食物
+func (self *RoomItem) IsFoodCollision() {
+
+}
+
+// 边界碰撞判断
+func (self *RoomItem) IsBorderCollision() {
+
+}
+
+// 食物是否满
+func (self *RoomItem) IsFoodListFull() {
+
+}
+
+// 玩家按照分数排行
+func (self *RoomItem) RoomUserRank() {
+
+}
+
+// 玩家移动
+func (self *RoomItem) IsPlayerMove() bool {
+	return false
 }

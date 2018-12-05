@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:59:24
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-04 19:11:29
+ * @LastEditTime: 2018-12-05 15:51:52
  * @Description: file content
  */
 package app
@@ -44,7 +44,7 @@ func (self *GreedyStar) JoinRoom(userID uint32, roomID uint64, userProfile []byt
 	item, ok := self.roomMap.Load(roomID)
 	if ok {
 		room := item.(*RoomItem)
-		room.AddUser(userID, userProfile)
+		room.UserJoinRoom(userID, userProfile)
 	} else {
 		log.LogD("no this room [%d]", roomID)
 	}

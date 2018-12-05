@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:55:57
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-04 19:29:25
+ * @LastEditTime: 2018-12-05 11:32:27
  * @Description: file content
  */
 
@@ -17,7 +17,15 @@ type Food struct {
 	Size  int `json:"size"`
 }
 
-func NewFood() *Food {
+func NewFood(id int) *Food {
 	food := new(Food)
+	food.X, food.Y = GetRandomPosition()
+	food.ID = id
+	food.Score = GenerateScore()
+	food.Size = food.Score
 	return food
+}
+
+func GenerateScore() int {
+	return ScoreList[GetRandNum(0, len(ScoreList)-1)]
 }
