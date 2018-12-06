@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:56:50
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-05 17:34:30
+ * @LastEditTime: 2018-12-06 15:44:06
  * @Description: file content
  */
 
@@ -22,6 +22,7 @@ var (
 	GAME_MAP_WIDTH          = 2560
 	GAME_MAP_HGITH          = 1440
 	FOOD_SHOW               = 1
+	USER_MIN_SPEED          = 1
 	FOOD_HIDE               = 2
 	SIZE_MULTIPLE           = 200
 	SPEED_MULTIPLE          = 3000
@@ -33,4 +34,9 @@ var (
 	ScoreList               = []int{20, 40, 60}
 	FOOD_INITIAL_SIZE       = []int{2, 3, 8}
 	FOOD_INITIAL_NUM        = 60
+)
+
+const (
+	OPTION_ADDFOOD = "addFood"
+	OPTION_MOVE    = "move"
 )

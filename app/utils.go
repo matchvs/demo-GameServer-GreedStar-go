@@ -3,12 +3,13 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:58:23
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-05 11:24:06
+ * @LastEditTime: 2018-12-06 19:14:07
  * @Description: file content
  */
 package app
 
 import (
+	"math"
 	"math/rand"
 	"time"
 )
@@ -19,8 +20,8 @@ func GetRandomPosition() (x, y int) {
 	minY := pad
 	maxX := GAME_MAP_WIDTH - pad
 	maxY := GAME_MAP_HGITH - pad
-	x = GetRandNum(minX, maxX)
-	y = GetRandNum(minY, maxY)
+	x = GetRandNums(minX, maxX, 3)[1]
+	y = GetRandNums(minY, maxY, 4)[3]
 	return
 }
 
@@ -58,4 +59,11 @@ func GetRandNums(min int, max int, count int) []int {
 	}
 
 	return nums
+}
+
+func IsCollisionWithCircle(x1, y1, r1, x2, y2, r2 int) bool {
+	if math.Sqrt(math.Pow(float64(x1-x2), 2)+math.Pow(float64((y1-y2)), 2)) <= float64(r1+r2) {
+		return true
+	}
+	return false
 }

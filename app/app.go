@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-11-28 14:30:33
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-04 19:14:38
+ * @LastEditTime: 2018-12-06 18:05:19
  * @Description: game server handler module, the struct of  App  implemente the interface which is located in game_server.go
  				 it is named BaseInterface
 */
@@ -40,14 +40,14 @@ func (self *App) SetPushHandler(push *matchvs.PushManager) {
 
 // 创建房间回调
 func (d *App) OnCreateRoom(req *defines.MsOnCreateRoom) (err error) {
-	log.LogD(" OnCreateRoom %v", req)
+	//log.LogD(" OnCreateRoom %v", req)
 	d.greedyStart.CreateRoom(req.GameID, req.RoomID, req.UserProfile)
 	return
 }
 
 // 加入房间回调
 func (d *App) OnJoinRoom(req *defines.MsOnJoinRoom) (err error) {
-	log.LogD(" OnJoinRoom %v", req)
+	log.LogD(" OnJoinRoom [roomID:%d][userID:%d]", req.RoomID, req.UserID)
 	d.greedyStart.JoinRoom(req.UserID, req.RoomID, req.UserProfile)
 	return
 }

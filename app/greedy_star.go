@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:59:24
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-05 15:51:52
+ * @LastEditTime: 2018-12-06 19:00:34
  * @Description: file content
  */
 package app
@@ -36,6 +36,7 @@ func (self *GreedyStar) CreateRoom(gameID uint32, roomID uint64, userProperty []
 	self.gameID = gameID
 	room := NewRoomItem(gameID, roomID)
 	room.SetPush(self.push)
+	go room.StartTimer()
 	self.roomMap.Store(roomID, room)
 }
 
@@ -56,19 +57,26 @@ func (self *GreedyStar) LeaveRoom(userID uint32, roomID uint64) {
 	if ok {
 		room := itme.(*RoomItem)
 		room.DelUser(userID)
-	} else {
-		log.LogD("no this room [%v]", roomID)
 	}
 }
 
 // 房间销毁
 func (self *GreedyStar) DeleteRoom(roomID uint64) {
+	room, ok := self.roomMap.Load(roomID)
+	if ok {
+		room.(*RoomItem).StopTimer()
+	}
 	self.roomMap.Delete(roomID)
 }
 
 // 处理来自客户端的消息
 func (self *GreedyStar) ClientEvent(userID uint32, roomID uint64, datas []byte) {
-	event := &RoomEventRecv{}
+	defer func() {
+		if err := recover(); err != nil {
+			log.LogD("stack error %v", err)
+		}
+	}()
+	event := &RoomEventSend{}
 	json.Unmarshal(datas, event)
 	item, ok := self.roomMap.Load(roomID)
 	if !ok {
@@ -77,7 +85,8 @@ func (self *GreedyStar) ClientEvent(userID uint32, roomID uint64, datas []byte) 
 	room := item.(*RoomItem)
 	switch event.Type {
 	case "input":
-		room.UpateUserInput(userID, event.Data.([]byte))
+		// log.LogD("%v", event.Data)
+		room.UpateUserInput(userID, event.Data.(map[string]interface{}))
 	case "startGame":
 		room.StartGame(self.gameID, userID)
 	}

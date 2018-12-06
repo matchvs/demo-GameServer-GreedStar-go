@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:56:34
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-05 16:56:49
+ * @LastEditTime: 2018-12-06 19:17:39
  * @Description: file content
  */
 package app
@@ -20,11 +20,11 @@ func NewGameUserSlice() GameUserSlice {
 }
 func (s GameUserSlice) Len() int           { return len(s) }
 func (s GameUserSlice) Swap(i, j int)      { s[i], s[j] = s[j], s[i] }
-func (s GameUserSlice) Less(i, j int) bool { return s[i].UserID > s[j].UserID }
+func (s GameUserSlice) Less(i, j int) bool { return s[i].Score > s[j].Score }
 func (s GameUserSlice) String() string {
 	var str string
 	for i := range s {
-		str = str + fmt.Sprintf("{%v %v}", s[i].UserID, &s[i].input)
+		str = str + fmt.Sprintf("{UserID:%d Score:%d}", s[i].UserID, s[i].Score)
 	}
 	return str
 }
@@ -42,22 +42,54 @@ type GameUser struct {
 }
 
 //
-func NewGameUser(uid uint32, status, score, size, speed int) *GameUser {
+func NewGameUser(uid uint32) *GameUser {
 	user := new(GameUser)
 	user.input = &ClientInput{}
 	user.UserID = uid
-	user.X, user.Y = GetRandomPosition()
-	user.Size = size
-	user.Status = status
-	user.Speed = speed
-	user.Score = score
+	user.ResetState()
 	return user
 }
 
 func (u *GameUser) UpdateInput(input *ClientInput) {
-	u.input.down = input.down
-	u.input.left = input.left
-	u.input.right = input.right
-	u.input.speed = input.speed
-	u.input.up = input.up
+	u.input.Down = input.Down
+	u.input.Left = input.Left
+	u.input.Right = input.Right
+	u.input.Speed = input.Speed
+	u.input.Up = input.Up
+}
+
+func (u *GameUser) ResetState() {
+	u.X, u.Y = GetRandomPosition()
+	u.Score = DEFAULT_SCORE
+	u.Size = USER_SIZE
+	u.Speed = DEFAULT_SPEED
+	u.Status = STATE_USER_PREPARED
+}
+
+func (u *GameUser) IsMove() bool {
+	userSpeed := 0
+	moveOk := false
+	if u.Score >= SPEED_DISSIPATION_SCORE && u.input.Speed == 1 {
+		u.Score -= SPEED_DISSIPATION_SCORE
+		userSpeed = u.Speed + SPEED_UP
+	} else {
+		userSpeed = u.Speed
+	}
+	if u.input.Left == 1 {
+		u.X -= userSpeed
+		moveOk = true
+	}
+	if u.input.Right == 1 {
+		u.X += userSpeed
+		moveOk = true
+	}
+	if u.input.Up == 1 {
+		u.Y += userSpeed
+		moveOk = true
+	}
+	if u.input.Down == 1 {
+		u.Y -= userSpeed
+		moveOk = true
+	}
+	return moveOk
 }
