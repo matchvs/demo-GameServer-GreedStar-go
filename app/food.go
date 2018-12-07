@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:55:57
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-05 11:32:27
+ * @LastEditTime: 2018-12-07 14:24:38
  * @Description: file content
  */
 
@@ -13,7 +13,7 @@ type Food struct {
 	X     int `json:"x"`
 	Y     int `json:"y"`
 	Score int `json:"score"`
-	ID    int `json:"id"`
+	ID    int `json:"ID"`
 	Size  int `json:"size"`
 }
 

@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:59:24
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-06 19:00:34
+ * @LastEditTime: 2018-12-07 17:48:33
  * @Description: file content
  */
 package app
@@ -85,7 +85,6 @@ func (self *GreedyStar) ClientEvent(userID uint32, roomID uint64, datas []byte) 
 	room := item.(*RoomItem)
 	switch event.Type {
 	case "input":
-		// log.LogD("%v", event.Data)
 		room.UpateUserInput(userID, event.Data.(map[string]interface{}))
 	case "startGame":
 		room.StartGame(self.gameID, userID)

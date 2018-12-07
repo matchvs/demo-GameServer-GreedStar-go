@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:55:45
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-06 20:06:37
+ * @LastEditTime: 2018-12-07 19:14:54
  * @Description: file content
  */
 package app
@@ -39,6 +39,7 @@ func NewRoomItem(gameID uint32, roomID uint64) *RoomItem {
 	room.userList = NewGameUserSlice()
 	room.gameTime = int32(GAME_TIME)
 	room.roomClose = make(chan int)
+	room.foodNum = 0
 	// 初始化食物
 	room.InitFoods()
 	return room
@@ -50,8 +51,9 @@ func (self *RoomItem) InitFoods() {
 	for i := 0; i < FOOD_INITIAL_NUM; i++ {
 		food := NewFood(i)
 		self.foodList = append(self.foodList, food)
+		self.foodNum++
 	}
-	self.foodNum = FOOD_INITIAL_NUM
+	log.LogD("init food number %d", self.foodNum)
 }
 
 func (self *RoomItem) SetPush(p *matchvs.PushManager) {
@@ -99,7 +101,7 @@ func (self *RoomItem) AddUser(userID uint32, userProfile []byte) *GameUser {
 	user := NewGameUser(userID)
 	self.userList = append(self.userList, user)
 	self.RoomUserRank()
-	log.LogD("当前用户：%v", self.userList)
+	// log.LogD("当前用户：%v", self.userList)
 	return user
 }
 
@@ -107,7 +109,7 @@ func (self *RoomItem) AddUser(userID uint32, userProfile []byte) *GameUser {
 func (self *RoomItem) DelUser(userID uint32) {
 	_, index := self.FindUser(userID)
 	self.userList = append(self.userList[0:index], self.userList[index+1:]...)
-	log.LogD("[%d] 离开房间，当前房间人数 [%d]", userID, len(self.userList))
+	log.LogD("[%d] leave room，user number [%d]", userID, len(self.userList))
 }
 
 // 更新用户输入操作
@@ -135,6 +137,7 @@ func (self *RoomItem) StartGame(gameID, userID uint32) {
 		Data:    self.userList,
 		Profile: self.gameTime,
 	}
+	log.LogD("开始游戏：[%d]", userID)
 	self.PushEventOther([]uint32{userID}, room)
 	self.SendFoodMsg(userID)
 	return
@@ -154,12 +157,14 @@ func (self *RoomItem) SendFoodMsg(userID uint32) {
 	}
 }
 
-// 发送其他用户给当 给指定用户
+// 发送其他用户给当 给指定用户, 返回除自己以外的其他玩家列表
 func (self *RoomItem) SendOtherUsers(userID uint32) {
-	users := make([]uint32, 0, len(self.userList))
+	users := make([]*GameUser, 0, len(self.userList))
+	uis := make([]uint32, 0, len(self.userList))
 	for key := range self.userList {
 		if self.userList[key].UserID != userID {
-			users = append(users, self.userList[key].UserID)
+			users = append(users, self.userList[key])
+			uis = append(uis, self.userList[key].UserID)
 		}
 	}
 	if len(users) > 0 {
@@ -167,7 +172,7 @@ func (self *RoomItem) SendOtherUsers(userID uint32) {
 			Type: "otherPlayer",
 			Data: users,
 		}
-		log.LogD("告诉[%d]房间现在有[%v]：", userID, users)
+		log.LogD("Tell [%d] OtherUsers:[%v]：", userID, uis)
 		self.PushEventOther([]uint32{userID}, event)
 	}
 }
@@ -193,7 +198,7 @@ func (self *RoomItem) PushEvent(event *RoomEventSend) error {
 	msg, _ := json.Marshal(event)
 	req := &defines.MsPushEventReq{
 		RoomID:    self.roomID,
-		PushType:  1,
+		PushType:  3,
 		GameID:    self.gameID,
 		DestsList: self.GetUserIDList(),
 		CpProto:   msg[:],
@@ -209,15 +214,17 @@ func (self *RoomItem) UserJoinRoom(userID uint32, userProfile []byte) {
 		Type: "addPlayer",
 		Data: user,
 	}
-	self.PushEventOther([]uint32{userID}, event)
 
+	self.PushEvent(event)
+	// 告诉当前玩家 游戏时间
 	event2 := &RoomEventSend{
 		Type: "countDown",
 		Data: self.gameTime,
 	}
 	self.PushEventOther([]uint32{userID}, event2)
-
+	// 给当前玩家发送食物列表
 	self.SendFoodMsg(userID)
+	// 告诉当前玩家，现在房间有哪些人
 	self.SendOtherUsers(userID)
 
 }
@@ -233,6 +240,7 @@ func (self *RoomItem) StartTimer() {
 			}
 		default:
 		}
+		self.gameTime--
 		if self.gameTime <= 0 {
 			event := &RoomEventSend{
 				Type: "GameOver",
@@ -281,8 +289,9 @@ func (self *RoomItem) IsUserscollision() {
 				}
 			}
 		}
-
+		// 检测食物碰撞
 		self.IsFoodCollision(p1)
+		// 检测边界碰撞
 		self.IsBorderCollision(p1)
 	}
 }
@@ -301,7 +310,7 @@ func (self *RoomItem) IsFoodCollision(user *GameUser) {
 				user.Speed = USER_MIN_SPEED
 			}
 			list = append(list[:i], list[i+1:]...)
-			log.LogD("吃掉了食物：[%v]", food.ID)
+			// log.LogD("吃掉了食物：[%v]", food.ID)
 			event := &RoomEventSend{
 				Type: "removeFood",
 				Data: food.ID,
@@ -319,11 +328,11 @@ func (self *RoomItem) IsBorderCollision(user *GameUser) {
 	uAcme := user.Y + user.Size
 	dAcme := user.Y - user.Size
 	if lAcme <= 0 || rAcme >= GAME_MAP_WIDTH || uAcme >= GAME_MAP_HGITH || dAcme <= 0 {
-		log.LogD("出界死了: ")
-		log.LogD("当前左边位置：[x=%d, size=%d, lAcme=%v]", user.X, user.Size, lAcme)
-		log.LogD("当前右边位置：[x=%d, size=%d, rAcme=%v]", user.X, user.Size, rAcme)
-		log.LogD("当前上边位置：[x=%d, size=%d, lAcme=%v]", user.Y, user.Size, uAcme)
-		log.LogD("当前下边位置：[x=%d, size=%d, lAcme=%v]", user.Y, user.Size, dAcme)
+		// log.LogD("出界死了: ")
+		// log.LogD("当前左边位置：[x=%d, size=%d, lAcme=%v]", user.X, user.Size, lAcme)
+		// log.LogD("当前右边位置：[x=%d, size=%d, rAcme=%v]", user.X, user.Size, rAcme)
+		// log.LogD("当前上边位置：[x=%d, size=%d, lAcme=%v]", user.Y, user.Size, uAcme)
+		// log.LogD("当前下边位置：[x=%d, size=%d, lAcme=%v]", user.Y, user.Size, dAcme)
 		user.ResetState()
 	}
 }
@@ -334,14 +343,14 @@ func (self *RoomItem) IsFoodListFull() {
 	for i := 0; i < FOOD_INITIAL_NUM; i++ {
 		number := len(self.foodList)
 		if number < FOOD_INITIAL_NUM {
-			log.LogD("当前食物数量：[%d]", number)
+			// log.LogD("当前食物数量：[%d]，下一个食物ID[%d]", number, self.foodNum)
 			food := NewFood(self.foodNum)
 			self.foodList = append(self.foodList, food)
 			self.foodNum++
 			list = append(list, food)
 		} else {
 			if len(list) > 0 {
-				log.LogD("新增加了食物：[%v] 个", len(list))
+				// log.LogD("新增加了食物：[%v] 个", len(list))
 				event := &RoomEventSend{
 					Type: OPTION_ADDFOOD,
 					Data: list,
