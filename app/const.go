@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:56:50
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-06 15:44:06
+ * @LastEditTime: 2018-12-11 18:20:51
  * @Description: file content
  */
 
@@ -13,8 +13,6 @@ const (
 	STATE_USER_PREPARED = 1
 	STATE_USER_PLAYING  = 2
 	STATE_USER_DIEAD    = 3
-
-	GAME_TIMER_INTERVAL = 50
 )
 
 var (
@@ -30,7 +28,9 @@ var (
 	DEFAULT_SCORE           = 0
 	SPEED_UP                = 2
 	SPEED_DISSIPATION_SCORE = 3
-	GAME_TIME               = 5400
+	GAME_TIME               = 120 // 游戏时间
+	GAME_FPS_INTERVAL       = 20  // 每秒执行多少次检测
+	GAME_TIMER_INTERVAL     = 1000 / GAME_FPS_INTERVAL
 	ScoreList               = []int{20, 40, 60}
 	FOOD_INITIAL_SIZE       = []int{2, 3, 8}
 	FOOD_INITIAL_NUM        = 60

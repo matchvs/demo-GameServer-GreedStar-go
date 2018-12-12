@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:55:45
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-07 19:14:54
+ * @LastEditTime: 2018-12-11 18:55:01
  * @Description: file content
  */
 package app
@@ -37,7 +37,7 @@ func NewRoomItem(gameID uint32, roomID uint64) *RoomItem {
 	room := new(RoomItem)
 	room.roomID = roomID
 	room.userList = NewGameUserSlice()
-	room.gameTime = int32(GAME_TIME)
+	room.gameTime = int32(GAME_TIME * GAME_FPS_INTERVAL)
 	room.roomClose = make(chan int)
 	room.foodNum = 0
 	// 初始化食物
@@ -130,7 +130,7 @@ func (self *RoomItem) UpateUserInput(userid uint32, data map[string]interface{})
 
 // 接收客户端发送的消息，同步开始游戏
 func (self *RoomItem) StartGame(gameID, userID uint32) {
-	self.gameTime = int32(GAME_TIME)
+	self.gameTime = int32(GAME_TIME * GAME_TIMER_INTERVAL)
 	// 做消息中转
 	room := &RoomEventSend{
 		Type:    "startGame",
@@ -231,6 +231,8 @@ func (self *RoomItem) UserJoinRoom(userID uint32, userProfile []byte) {
 
 // 房间游戏定时器
 func (self *RoomItem) StartTimer() {
+	timerInterval := time.Duration(GAME_TIMER_INTERVAL)
+	// log.LogD("timerInterval:%v", timerInterval)
 	for {
 		select {
 		case _, ok := <-self.roomClose:
@@ -238,32 +240,31 @@ func (self *RoomItem) StartTimer() {
 				log.LogI("room[%d] is deleted", self.roomID)
 				return
 			}
-		default:
-		}
-		self.gameTime--
-		if self.gameTime <= 0 {
-			event := &RoomEventSend{
-				Type: "GameOver",
-				Data: "",
-			}
-			// 发送给所有人
-			self.PushEvent(event)
-			return
-		}
-		self.IsUserscollision()
-		self.IsFoodListFull()
-		self.RoomUserRank()
-		if self.IsPlayerMove() {
-			event := &RoomEventSend{
-				Type: OPTION_MOVE,
-				Data: self.userList,
-			}
-			if err := self.PushEvent(event); err != nil {
-				log.LogE("push player move error : %v", err)
+		case <-time.After(time.Millisecond * timerInterval):
+			self.gameTime--
+			if self.gameTime <= 0 {
+				event := &RoomEventSend{
+					Type: "GameOver",
+					Data: "",
+				}
+				// 发送给所有人
+				self.PushEvent(event)
 				return
 			}
+			self.IsUserscollision()
+			self.IsFoodListFull()
+			self.RoomUserRank()
+			if self.IsPlayerMove() {
+				event := &RoomEventSend{
+					Type: OPTION_MOVE,
+					Data: self.userList,
+				}
+				if err := self.PushEvent(event); err != nil {
+					log.LogE("push player move error : %v", err)
+					return
+				}
+			}
 		}
-		time.Sleep(time.Millisecond * GAME_TIMER_INTERVAL)
 	}
 }
 func (self *RoomItem) StopTimer() {
@@ -369,10 +370,12 @@ func (self *RoomItem) RoomUserRank() {
 
 // 玩家移动
 func (self *RoomItem) IsPlayerMove() bool {
+	ismove := false
 	for i := 0; i < len(self.userList); i++ {
 		if self.userList[i].IsMove() {
-			return true
+			// log.LogD("用户[%d]在移动", self.userList[i].UserID)
+			ismove = true
 		}
 	}
-	return false
+	return ismove
 }

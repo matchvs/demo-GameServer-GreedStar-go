@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-11-28 14:30:33
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-06 18:05:19
+ * @LastEditTime: 2018-12-11 14:57:46
  * @Description: game server handler module, the struct of  App  implemente the interface which is located in game_server.go
  				 it is named BaseInterface
 */
@@ -78,6 +78,7 @@ func (d *App) OnLeaveRoom(req map[string]interface{}) (err error) {
 // 踢人回调
 func (d *App) OnKickPlayer(req map[string]interface{}) (err error) {
 	log.LogD(" OnKickPlayer %v", req)
+	d.greedyStart.KickPlayer(req["userID"].(uint32), req["roomID"].(uint64))
 	return
 }
 

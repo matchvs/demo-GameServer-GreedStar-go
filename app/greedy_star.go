@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:59:24
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-07 17:48:33
+ * @LastEditTime: 2018-12-11 14:57:13
  * @Description: file content
  */
 package app
@@ -58,6 +58,10 @@ func (self *GreedyStar) LeaveRoom(userID uint32, roomID uint64) {
 		room := itme.(*RoomItem)
 		room.DelUser(userID)
 	}
+}
+
+func (self *GreedyStar) KickPlayer(userID uint32, roomID uint64) {
+	self.LeaveRoom(userID, roomID)
 }
 
 // 房间销毁
