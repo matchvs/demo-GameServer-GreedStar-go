@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:59:24
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-11 14:57:13
+ * @LastEditTime: 2018-12-18 19:05:05
  * @Description: file content
  */
 package app
@@ -12,13 +12,12 @@ import (
 	"encoding/json"
 	"sync"
 
-	"github.com/matchvs/gameServer-go/src/log"
-
 	matchvs "github.com/matchvs/gameServer-go"
+	"github.com/matchvs/gameServer-go/src/log"
 )
 
 type GreedyStar struct {
-	push    *matchvs.PushManager
+	push    matchvs.PushHandler
 	roomMap sync.Map
 	gameID  uint32
 }
@@ -28,7 +27,7 @@ func NewGreedyStar() *GreedyStar {
 	return gst
 }
 
-func (self *GreedyStar) SetPush(p *matchvs.PushManager) {
+func (self *GreedyStar) SetPush(p matchvs.PushHandler) {
 	self.push = p
 }
 

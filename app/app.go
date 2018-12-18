@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-11-28 14:30:33
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-11 14:57:46
+ * @LastEditTime: 2018-12-18 19:03:01
  * @Description: game server handler module, the struct of  App  implemente the interface which is located in game_server.go
  				 it is named BaseInterface
 */
@@ -21,7 +21,7 @@ import (
 
 type App struct {
 	counter     uint32
-	push        *matchvs.PushManager
+	push        matchvs.PushHandler
 	greedyStart *GreedyStar
 }
 
@@ -33,7 +33,7 @@ func NewApp() *App {
 	return app
 }
 
-func (self *App) SetPushHandler(push *matchvs.PushManager) {
+func (self *App) SetPushHandler(push matchvs.PushHandler) {
 	self.push = push
 	self.greedyStart.SetPush(push)
 }

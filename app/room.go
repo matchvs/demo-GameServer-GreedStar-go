@@ -3,7 +3,7 @@
  * @Author: Ville
  * @Date: 2018-12-03 16:55:45
  * @LastEditors: Ville
- * @LastEditTime: 2018-12-11 18:55:01
+ * @LastEditTime: 2018-12-18 19:04:54
  * @Description: file content
  */
 package app
@@ -14,18 +14,16 @@ import (
 	"sort"
 	"time"
 
-	"github.com/matchvs/gameServer-go/src/log"
-
-	"github.com/matchvs/gameServer-go/src/defines"
-
 	matchvs "github.com/matchvs/gameServer-go"
+	"github.com/matchvs/gameServer-go/src/defines"
+	"github.com/matchvs/gameServer-go/src/log"
 )
 
 type RoomItem struct {
 	roomID    uint64
 	userList  GameUserSlice
 	gameTime  int32
-	push      *matchvs.PushManager
+	push      matchvs.PushHandler
 	gameID    uint32
 	foodList  []*Food
 	foodNum   int
@@ -56,7 +54,7 @@ func (self *RoomItem) InitFoods() {
 	log.LogD("init food number %d", self.foodNum)
 }
 
-func (self *RoomItem) SetPush(p *matchvs.PushManager) {
+func (self *RoomItem) SetPush(p matchvs.PushHandler) {
 	self.push = p
 }
 
